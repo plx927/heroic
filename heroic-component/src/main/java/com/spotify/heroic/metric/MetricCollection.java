@@ -24,8 +24,11 @@ package com.spotify.heroic.metric;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
+import com.spotify.heroic.ObjectLifecycleMonitor;
+import com.spotify.heroic.ObjectLifecycleMonitorProvider;
 import com.spotify.heroic.aggregation.AggregationSession;
 import com.spotify.heroic.common.Series;
+import javax.inject.Inject;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -68,10 +71,22 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @see MetricGroup
  */
 @Data
-@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+//@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
 public abstract class MetricCollection {
+
     final MetricType type;
     final List<? extends Metric> data;
+
+    public MetricCollection(final MetricType type, final List<? extends Metric> data) {
+        this.type = type;
+        this.data = data;
+
+        long numBytes = 0;
+        for (Metric m : data) {
+            numBytes += m.inMemoryByteSize();
+        }
+        ObjectLifecycleMonitorProvider.get().registerObject(this, "MetricCollection#" + type.identifier(), numBytes);
+    }
 
     /**
      * Helper method to fetch a collection of the given type, if applicable.
